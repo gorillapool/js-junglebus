@@ -1,0 +1,15 @@
+bower_components
+node_modules
+test
+*.log
+.DS_Store
+.idea
+examples/
+.github
+.firebase
+.firebase/
+.firebaserc
+firebase.json
+todo.md
+.goreleaser.yml
+Makefile
