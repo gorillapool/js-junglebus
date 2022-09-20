@@ -1,6 +1,6 @@
 {
   "name": "@gorillapool/js-junglebus",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "TypeScript library for connecting to a GorillaPool JungleBus server",
   "author": "Siggi <github@icellan.com>",
   "homepage": "https://junglebus.gorillapool.io",
