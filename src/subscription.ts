@@ -193,7 +193,8 @@ export class JungleBusSubscription {
     } else {
       return {
         ...ctx.data,
-        transaction: typeof Buffer !== "undefined" ? Buffer.from(ctx.data.transaction, 'base64').toString('hex') : base64ToHex(ctx.data.transaction),
+        // transactions can be missing, which means they are stored in S3
+        transaction: ctx.data.transaction ? typeof Buffer !== "undefined" ? Buffer.from(ctx.data.transaction, 'base64').toString('hex') : base64ToHex(ctx.data.transaction) : '',
         // merkle proofs are missing from mempool transactions
         merkle_proof: ctx.data.merkle_proof ? (typeof Buffer !== "undefined" ? Buffer.from(ctx.data.merkle_proof, 'base64').toString('hex') : base64ToHex(ctx.data.merkle_proof)) : '',
       };

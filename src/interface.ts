@@ -21,6 +21,10 @@ export interface Client {
   error?: Error;
 }
 
+export interface PaymentRequest {
+  tx: string; // transaction template
+}
+
 export interface ClientOptions {
   protocol: "protobuf" | "json" | undefined;
   useSSL?: boolean;
@@ -29,6 +33,7 @@ export interface ClientOptions {
   onDisconnected?: (ctx: DisconnectedContext) => void;
   onConnected?: (ctx: ConnectedContext) => void;
   onError?: (ctx: ErrorContext) => void;
+  onPayment?: (request: PaymentRequest) => void;
   debug?: boolean;
 }
 

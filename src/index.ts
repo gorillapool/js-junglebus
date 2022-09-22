@@ -74,6 +74,10 @@ export class JungleBusClient {
     }
   }
 
+  private getToken() {
+    return this.client.token
+  }
+
   /**
    * Get an anonymous token based on a subscription ID to the JungleBus server
    *
@@ -121,17 +125,20 @@ export class JungleBusClient {
    * @return void
    */
   Connect(): void {
+    const self = this;
     const client = this.client;
 
     client.centrifuge = new Centrifuge(`${this.client.useSSL ? 'wss' : 'ws'}://${client.serverUrl}/connection/websocket${(client.protocol === "protobuf" ? '?format=protobuf' : '')}`, {
       protocol: client.protocol,
       debug: client.debug,
       websocket: typeof window !== "undefined" ? window.WebSocket : ws,
+      timeout: 5000,
+      maxServerPingDelay: 30000,
       getToken: function () {
         return new Promise((resolve, reject) => {
           fetch(`${client.useSSL ? 'https' : 'http'}://${client.serverUrl}/v1/user/refresh-token`, {
             headers: {
-              token: client.token || '',
+              token: self.getToken() || '',
             }
           })
             .then(res => {

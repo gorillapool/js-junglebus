@@ -17,10 +17,10 @@ export default [
       format: "umd",
       sourcemap: true,
     },
-    external: ['bsv'],
+    external: ['bsv', 'cross-fetch'],
     plugins: [
       resolve({
-        skip: ['bsv']
+        skip: ['bsv', 'cross-fetch']
       }),
       commonjs(),
       json(),

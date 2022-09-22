@@ -19,7 +19,7 @@
 <br />
 
 ## What is JungleBus?
-[Read more about JungleBus](https://junglebus.gorillapool.com)
+[Read more about JungleBus](https://junglebus.gorillapool.io)
 
 <br />
 
@@ -41,7 +41,7 @@ Here's the getting started with JungleBus
 ```javascript
 import { JungleBusClient } from '@gorillapool/js-junglebus';
 
-const server = "junglebus.gorillapool.com";
+const server = "junglebus.gorillapool.io";
 const jungleBusClient = new JungleBusClient(server, {
   onConnected(ctx) {
     // add your own code here
@@ -60,31 +60,36 @@ const jungleBusClient = new JungleBusClient(server, {
     console.error(ctx);
   }
 });
-jungleBusClient.Login("username", "password");
-jungleBusClient.Connect();
 
 // create subscriptions in the dashboard of the JungleBus website
-const subId = "<Some subscription ID>";
+const subId = "....";
 const fromBlock = 750000;
 const subscription = jungleBusClient.Subscribe(
   subId,
-  fromBlock, 
-  function onPublish(ctx) {
+  fromBlock,
+  function onPublish(tx) {
     // add your own code here
-    console.log(ctx);
+    console.log(tx);
 
   },
-  function onBlockDone(ctx) {
+  function onStatus(ctx) {
     // add your own code here
     console.log(ctx);
+  },
+  function onError(ctx) {
+    // add your own code here
+    console.log(ctx);
+  },
+  function onMempool(tx) {
+    // add your own code here
+    console.log(tx);
   });
-subscription.Subscribe();
 ```
 
 <br />
 
 ## Documentation
-View more [JungleBus documentation](https://junglebus.gorillapool.com/docs).
+View more [JungleBus documentation](https://junglebus.gorillapool.io/docs).
 
 ## Code Standards
 Please read our [code standards document](.github/CODE_STANDARDS.md)
