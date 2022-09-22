@@ -17,10 +17,10 @@ export default [
       format: "umd",
       sourcemap: true,
     },
-    external: ['bsv', 'cross-fetch'],
+    external: ['bsv', 'cross-fetch', 'cross-fetch/polyfill'],
     plugins: [
       resolve({
-        skip: ['bsv', 'cross-fetch']
+        skip: ['bsv']
       }),
       commonjs(),
       json(),
@@ -41,6 +41,7 @@ export default [
       { file: pkg.main, format: "cjs", sourcemap: true },
       { file: pkg.module, format: "es", sourcemap: true },
     ],
+    external: ['cross-fetch', 'cross-fetch/polyfill'],
     plugins: [
       typescript({ tsconfig: "./tsconfig.json", sourceMap: true }),
       excludeDependenciesFromBundle( { peerDependencies: true } ),

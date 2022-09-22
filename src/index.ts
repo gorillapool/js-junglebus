@@ -9,6 +9,7 @@ import {
 import Centrifuge from 'centrifuge/build/protobuf';
 import { JungleBusSubscription } from "./subscription";
 import { SubscriptionErrorContext } from "centrifuge";
+import "cross-fetch/polyfill";
 
 let ws: any;
 if (typeof window === "undefined") {
