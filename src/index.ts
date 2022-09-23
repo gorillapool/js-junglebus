@@ -1,4 +1,6 @@
 import {
+  Address,
+  BlockHeader,
   Client,
   ClientOptions,
   ControlMessage,
@@ -66,7 +68,7 @@ export class JungleBusClient {
       }
 
       const body = await response.json();
-      this.client.token = body.token;
+      this.SetToken(body.token);
 
       return null;
     } catch(e: any) {
@@ -77,6 +79,16 @@ export class JungleBusClient {
 
   private getToken() {
     return this.client.token
+  }
+
+  /**
+   * Set the JWT token to use in all calls
+   *
+   * @param token string
+   * @constructor
+   */
+  SetToken(token: string) {
+    return this.client.token = token;
   }
 
   /**
@@ -102,7 +114,7 @@ export class JungleBusClient {
       }
 
       const body = await response.json();
-      this.client.token = body.token;
+      this.SetToken(body.token);
 
       return null;
     } catch(e: any) {
@@ -149,6 +161,8 @@ export class JungleBusClient {
               return res.json();
             })
             .then(data => {
+              // update the token
+              self.SetToken(data.token);
               resolve(data.token);
             })
             .catch(err => {
@@ -213,6 +227,86 @@ export class JungleBusClient {
     }
 
     return new JungleBusSubscription(this.client, subscriptionID, fromBlock, onPublish, onStatus, onError, onMempool);
+  }
+
+  /**
+   *  Get a transaction from the JungleBus API
+   *
+   * @param txId Transaction ID in hex
+   * @return Promise<Transaction> | null
+   */
+  async GetTransaction(txId: string): Promise<Transaction | null> {
+    const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${txId}`;
+    return await this.apiRequest(url);
+  }
+
+
+  /**
+   *  Get block header info from JungleBus
+   *
+   * @param block Block header height or hash
+   * @return Promise<BlockHeader> | null
+   */
+  async GetBlockHeader(block: string | number): Promise<BlockHeader | null> {
+    const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/block_header/get/${block}`;
+    return await this.apiRequest(url);
+  }
+
+  /**
+   *  Get a list of block headers from JungleBus
+   *
+   * @param fromBlock Block header height or hash
+   * @param limit Limit the number of results to this number (max 10,000)
+   * @return Promise<BlockHeader> | null
+   */
+  async GetBlockHeaders(fromBlock: string | number, limit: number): Promise<BlockHeader[] | null> {
+    const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/block_header/list/${fromBlock}?limit=${limit}`;
+    return await this.apiRequest(url);
+  }
+
+  /**
+   *  Get all transaction references for the given address
+   *
+   * @param address Bitcoin address
+   * @return Promise<BlockHeader> | null
+   */
+  async GetAddressTransactions(address: string): Promise<Address[] | null> {
+    const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/address/get/${address}`;
+    return await this.apiRequest(url);
+  }
+
+  /**
+   *  Get all transactions, including the hex and merkle proof, for the given address
+   *
+   *  This function is much slower than GetAddressTransactions
+   *
+   * @param address Bitcoin address
+   * @return Promise<BlockHeader> | null
+   */
+  async GetAddressTransactionDetails(address: string): Promise<Address[] | null> {
+    const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/address/transactions/${address}`;
+    return await this.apiRequest(url);
+  }
+
+  private async apiRequest(url: string) {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          "content-type": "application/json",
+          token: this.getToken() || '',
+        },
+      });
+      if (response.status !== 200) {
+        this.client.error = new Error(response.statusText);
+        return null;
+      }
+
+      return await response.json();
+    } catch (e: any) {
+      this.client.error = e;
+      throw e;
+    }
   }
 }
 

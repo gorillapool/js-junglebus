@@ -37,6 +37,26 @@ export interface ClientOptions {
   debug?: boolean;
 }
 
+export interface Address {
+  id: string;
+  address: string;
+  transaction_id: string;
+  block_hash: string;
+  transaction_num: number;
+}
+
+export interface BlockHeader {
+  hash: string;
+  coin: number;
+  height: number;
+  time: number;
+  nonce: number;
+  version: number;
+  merkleroot: string;
+  bits: string;
+  synced: number;
+}
+
 export interface Transaction {
   id: string;
   block_hash: string;
