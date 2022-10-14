@@ -1,7 +1,9 @@
 import { PublicationContext, Subscription, SubscriptionErrorContext } from "centrifuge";
+import Queue from 'better-queue';
 
 import { Client, ControlMessage, ControlMessageStatusCode, Transaction, TransactionMessage } from "./interface";
 import { ProtobufRoot } from "./protobuf";
+import BetterQueue from "better-queue";
 
 /**
  * JungleBusSubscription class
@@ -11,6 +13,8 @@ import { ProtobufRoot } from "./protobuf";
  * const jungleBusClient = new JungleBusSubscription(options: Subscription)
  */
 export class JungleBusSubscription {
+  MaxQueueSize: number = 20;
+
   client: Client;
   subscription: Subscription | undefined;
   controlSubscription: Subscription | undefined;
@@ -25,6 +29,10 @@ export class JungleBusSubscription {
   controlSubscribed: boolean;
   mempoolSubscribed: boolean;
   error: SubscriptionErrorContext | undefined;
+
+  private subscriptionQueue: BetterQueue;
+  private controlQueue: BetterQueue;
+  private mempoolQueue: BetterQueue;
 
   constructor(
     client: Client,
@@ -46,6 +54,25 @@ export class JungleBusSubscription {
     this.subscribed = false;
     this.controlSubscribed = false;
     this.mempoolSubscribed = false;
+
+    this.subscriptionQueue = new Queue(async function (tx, cb) {
+      if (onPublish) {
+        onPublish(tx)
+      }
+      cb(null, true);
+    });
+    this.controlQueue = new Queue(async function (message, cb) {
+      if (onStatus) {
+        onStatus(message)
+      }
+      cb(null, true);
+    });
+    this.mempoolQueue = new Queue(async function (tx, cb) {
+      if (onMempool) {
+        onMempool(tx)
+      }
+      cb(null, true);
+    });
 
     this.Subscribe();
   }
@@ -103,7 +130,7 @@ export class JungleBusSubscription {
         }
 
         if (this.onStatus) {
-          this.onStatus(message);
+          this.controlQueue.push(message);
         } else {
           //console.log(message);
         }
@@ -129,7 +156,7 @@ export class JungleBusSubscription {
     this.mempoolSubscription.on('publication', (ctx) => {
       if (this.onMempool) {
         const tx = this.processTransaction(self, ctx);
-        this.onMempool(tx);
+        this.mempoolQueue.push(tx);
       }
     })
       .on("subscribed", function (ctx) {
@@ -147,13 +174,37 @@ export class JungleBusSubscription {
   private subscribeTransactionBlocks(): void {
     const channel = `query:${this.subscriptionID}:${this.currentBlock}`;
 
+    let pauseTimeOut: ReturnType<typeof setTimeout>;
+
     const self = this;
     this.subscription = self.client.centrifuge.newSubscription(channel);
+
+    function pauseProcessing() {
+      return setTimeout(() => {
+        // @ts-ignore
+        const queueLength = self.subscriptionQueue.length;
+        if (queueLength < self.MaxQueueSize / 2) {
+          self.subscription?.publish({ cmd: 'start' });
+        } else {
+          pauseTimeOut = pauseProcessing();
+        }
+      }, 2000);
+    }
+
     this.subscription
       .on('publication', (ctx) => {
-        const tx = this.processTransaction(self, ctx);
         if (this.onPublish) {
-          this.onPublish(tx);
+          const tx = self.processTransaction(self, ctx);
+          this.subscriptionQueue.push(tx)
+          // @ts-ignore
+          const queueLength = self.subscriptionQueue.length;
+          if (queueLength > self.MaxQueueSize) {
+            self.subscription?.publish({cmd: 'pause'});
+            if (pauseTimeOut) {
+              clearTimeout(pauseTimeOut);
+            }
+            pauseTimeOut = pauseProcessing();
+          }
         }
       })
       .on("subscribed", function (ctx) {
