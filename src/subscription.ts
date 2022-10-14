@@ -13,7 +13,9 @@ import BetterQueue from "better-queue";
  * const jungleBusClient = new JungleBusSubscription(options: Subscription)
  */
 export class JungleBusSubscription {
-  MaxQueueSize: number = 20;
+  // Set the max size of the internal queue, before pausing the subscription to be able to catch up
+  // this doesn't use a lot of RAM
+  MaxQueueSize: number = 20000;
 
   client: Client;
   subscription: Subscription | undefined;
@@ -28,10 +30,10 @@ export class JungleBusSubscription {
   subscribed: boolean;
   controlSubscribed: boolean;
   mempoolSubscribed: boolean;
+  paused: boolean = false;
   error: SubscriptionErrorContext | undefined;
 
   private subscriptionQueue: BetterQueue;
-  private controlQueue: BetterQueue;
   private mempoolQueue: BetterQueue;
 
   constructor(
@@ -56,20 +58,20 @@ export class JungleBusSubscription {
     this.mempoolSubscribed = false;
 
     this.subscriptionQueue = new Queue(async function (tx, cb) {
-      if (onPublish) {
-        onPublish(tx)
-      }
-      cb(null, true);
-    });
-    this.controlQueue = new Queue(async function (message, cb) {
-      if (onStatus) {
-        onStatus(message)
+      if (tx.statusCode) {
+        if (onStatus) {
+          await onStatus(tx)
+        }
+      } else {
+        if (onPublish) {
+          await onPublish(tx)
+        }
       }
       cb(null, true);
     });
     this.mempoolQueue = new Queue(async function (tx, cb) {
       if (onMempool) {
-        onMempool(tx)
+        await onMempool(tx)
       }
       cb(null, true);
     });
@@ -130,7 +132,7 @@ export class JungleBusSubscription {
         }
 
         if (this.onStatus) {
-          this.controlQueue.push(message);
+          this.subscriptionQueue.push(message);
         } else {
           //console.log(message);
         }
@@ -178,6 +180,7 @@ export class JungleBusSubscription {
 
     const self = this;
     this.subscription = self.client.centrifuge.newSubscription(channel);
+    this.paused = false;
 
     function pauseProcessing() {
       return setTimeout(() => {
@@ -185,6 +188,7 @@ export class JungleBusSubscription {
         const queueLength = self.subscriptionQueue.length;
         if (queueLength < self.MaxQueueSize / 2) {
           self.subscription?.publish({ cmd: 'start' });
+          self.paused = false;
         } else {
           pauseTimeOut = pauseProcessing();
         }
@@ -199,7 +203,17 @@ export class JungleBusSubscription {
           // @ts-ignore
           const queueLength = self.subscriptionQueue.length;
           if (queueLength > self.MaxQueueSize) {
-            self.subscription?.publish({cmd: 'pause'});
+            if (!self.paused) {
+              self.subscription?.publish({ cmd: 'pause' });
+              self.paused = true;
+              if (self.onStatus) {
+                self.onStatus({
+                  statusCode: ControlMessageStatusCode.PAUSED,
+                  status: "paused subscription",
+                  message: "paused subscription to catch up",
+                } as ControlMessage)
+              }
+            }
             if (pauseTimeOut) {
               clearTimeout(pauseTimeOut);
             }
