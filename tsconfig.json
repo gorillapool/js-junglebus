@@ -1,10 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "target": "es6",
     "module": "esnext",
     "moduleResolution": "node",
@@ -12,6 +8,7 @@
     "esModuleInterop": true,
     "declaration": true,
     "declarationDir": "dist/dts/",
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "typeRoots": ["./src/types/**/*"]
   }
 }

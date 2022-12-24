@@ -1,9 +1,20 @@
-import { PublicationContext, Subscription, SubscriptionErrorContext } from "centrifuge";
-import Queue from 'better-queue';
+import Queue from "better-queue";
+import {
+  PublicationContext,
+  Subscription,
+  SubscriptionErrorContext,
+} from "centrifuge";
 
-import { Client, ControlMessage, ControlMessageStatusCode, Transaction, TransactionMessage } from "./interface";
-import { ProtobufRoot } from "./protobuf";
 import BetterQueue from "better-queue";
+import MemoryStore from "better-queue-memory";
+import {
+  Client,
+  ControlMessage,
+  ControlMessageStatusCode,
+  Transaction,
+  TransactionMessage,
+} from "./interface";
+import { ProtobufRoot } from "./protobuf";
 
 /**
  * JungleBusSubscription class
@@ -43,7 +54,7 @@ export class JungleBusSubscription {
     onPublish?: (tx: Transaction) => void,
     onStatus?: (message: ControlMessage) => void,
     onError?: (error: SubscriptionErrorContext) => void,
-    onMempool?: (tx: Transaction) => void,
+    onMempool?: (tx: Transaction) => void
   ) {
     this.client = client;
     this.subscriptionID = subscriptionID;
@@ -57,24 +68,40 @@ export class JungleBusSubscription {
     this.controlSubscribed = false;
     this.mempoolSubscribed = false;
 
-    this.subscriptionQueue = new Queue(async function (tx, cb) {
-      if (tx.statusCode) {
-        if (onStatus) {
-          await onStatus(tx)
+    this.subscriptionQueue = new Queue(
+      async function (tx, cb) {
+        if (tx.statusCode) {
+          if (onStatus) {
+            await onStatus(tx);
+          }
+        } else {
+          if (onPublish) {
+            await onPublish(tx);
+          }
         }
-      } else {
-        if (onPublish) {
-          await onPublish(tx)
+        cb(null, true);
+      },
+      typeof window === "object"
+        ? {
+            // If we're in the browser use better-queue-memory
+            store: new MemoryStore(),
+          }
+        : undefined
+    );
+    this.mempoolQueue = new Queue(
+      async function (tx, cb) {
+        if (onMempool) {
+          await onMempool(tx);
         }
-      }
-      cb(null, true);
-    });
-    this.mempoolQueue = new Queue(async function (tx, cb) {
-      if (onMempool) {
-        await onMempool(tx)
-      }
-      cb(null, true);
-    });
+        cb(null, true);
+      },
+      typeof window === "object"
+        ? {
+            // If we're in the browser use better-queue-memory
+            store: new MemoryStore(),
+          }
+        : undefined
+    );
 
     this.Subscribe();
   }
@@ -85,7 +112,11 @@ export class JungleBusSubscription {
    * @return void
    */
   Subscribe(): void {
-    if (this.subscription || this.controlSubscription || this.mempoolSubscription) {
+    if (
+      this.subscription ||
+      this.controlSubscription ||
+      this.mempoolSubscription
+    ) {
       // if the subscriptions are active, unsubscribe and then re-subscribe
       this.UnSubscribe();
     }
@@ -104,40 +135,41 @@ export class JungleBusSubscription {
     const self = this;
     const controlChannel = `query:${self.subscriptionID}:control`;
 
-    this.controlSubscription = this.client.centrifuge.newSubscription(controlChannel);
-    this.controlSubscription.on('publication', (ctx) => {
-      let message: ControlMessage;
-      if (this.client.protocol === "protobuf") {
-        const Message = ProtobufRoot.lookupType("ControlResponse");
-        message = Message.decode(ctx.data) as unknown as ControlMessage;
-      } else {
-        message = ctx.data;
-      }
-
-
-      if (message.statusCode === ControlMessageStatusCode.ERROR) {
-        if (self.onError) {
-          self.onError({
-            channel: ctx.channel,
-            type: message.status,
-            error: {
-              code: message.statusCode,
-              message: message.status
-            },
-          });
-        }
-      } else {
-        if (message.statusCode === ControlMessageStatusCode.BLOCK_DONE) {
-          this.currentBlock = message.block;
-        }
-
-        if (this.onStatus) {
-          this.subscriptionQueue.push(message);
+    this.controlSubscription =
+      this.client.centrifuge.newSubscription(controlChannel);
+    this.controlSubscription
+      .on("publication", (ctx) => {
+        let message: ControlMessage;
+        if (this.client.protocol === "protobuf") {
+          const Message = ProtobufRoot.lookupType("ControlResponse");
+          message = Message.decode(ctx.data) as unknown as ControlMessage;
         } else {
-          //console.log(message);
+          message = ctx.data;
         }
-      }
-    })
+
+        if (message.statusCode === ControlMessageStatusCode.ERROR) {
+          if (self.onError) {
+            self.onError({
+              channel: ctx.channel,
+              type: message.status,
+              error: {
+                code: message.statusCode,
+                message: message.status,
+              },
+            });
+          }
+        } else {
+          if (message.statusCode === ControlMessageStatusCode.BLOCK_DONE) {
+            this.currentBlock = message.block;
+          }
+
+          if (this.onStatus) {
+            this.subscriptionQueue.push(message);
+          } else {
+            //console.log(message);
+          }
+        }
+      })
       .on("subscribed", function (ctx) {
         self.controlSubscribed = true;
       })
@@ -154,13 +186,15 @@ export class JungleBusSubscription {
     const self = this;
     const mempoolChannel = `query:${self.subscriptionID}:mempool`;
 
-    this.mempoolSubscription = self.client.centrifuge.newSubscription(mempoolChannel);
-    this.mempoolSubscription.on('publication', (ctx) => {
-      if (this.onMempool) {
-        const tx = this.processTransaction(self, ctx);
-        this.mempoolQueue.push(tx);
-      }
-    })
+    this.mempoolSubscription =
+      self.client.centrifuge.newSubscription(mempoolChannel);
+    this.mempoolSubscription
+      .on("publication", (ctx) => {
+        if (this.onMempool) {
+          const tx = this.processTransaction(self, ctx);
+          this.mempoolQueue.push(tx);
+        }
+      })
       .on("subscribed", function (ctx) {
         self.mempoolSubscribed = true;
       })
@@ -187,7 +221,7 @@ export class JungleBusSubscription {
         // @ts-ignore
         const queueLength = self.subscriptionQueue.length;
         if (queueLength < self.MaxQueueSize / 2) {
-          self.subscription?.publish({ cmd: 'start' });
+          self.subscription?.publish({ cmd: "start" });
           self.paused = false;
         } else {
           pauseTimeOut = pauseProcessing();
@@ -196,22 +230,22 @@ export class JungleBusSubscription {
     }
 
     this.subscription
-      .on('publication', (ctx) => {
+      .on("publication", (ctx) => {
         if (this.onPublish) {
           const tx = self.processTransaction(self, ctx);
-          this.subscriptionQueue.push(tx)
+          this.subscriptionQueue.push(tx);
           // @ts-ignore
           const queueLength = self.subscriptionQueue.length;
           if (queueLength > self.MaxQueueSize) {
             if (!self.paused) {
-              self.subscription?.publish({ cmd: 'pause' });
+              self.subscription?.publish({ cmd: "pause" });
               self.paused = true;
               if (self.onStatus) {
                 self.onStatus({
                   statusCode: ControlMessageStatusCode.PAUSED,
                   status: "paused subscription",
                   message: "paused subscription to catch up",
-                } as ControlMessage)
+                } as ControlMessage);
               }
             }
             if (pauseTimeOut) {
@@ -253,15 +287,25 @@ export class JungleBusSubscription {
         ...message,
         transaction: toHexString(message.transaction),
         // merkle proofs are missing from mempool transactions
-        merkle_proof: message.merkle_proof ? toHexString(message.merkle_proof) : '',
+        merkle_proof: message.merkle_proof
+          ? toHexString(message.merkle_proof)
+          : "",
       };
     } else {
       return {
         ...ctx.data,
         // transactions can be missing, which means they are stored in S3
-        transaction: ctx.data.transaction ? typeof Buffer !== "undefined" ? Buffer.from(ctx.data.transaction, 'base64').toString('hex') : base64ToHex(ctx.data.transaction) : '',
+        transaction: ctx.data.transaction
+          ? typeof Buffer !== "undefined"
+            ? Buffer.from(ctx.data.transaction, "base64").toString("hex")
+            : base64ToHex(ctx.data.transaction)
+          : "",
         // merkle proofs are missing from mempool transactions
-        merkle_proof: ctx.data.merkle_proof ? (typeof Buffer !== "undefined" ? Buffer.from(ctx.data.merkle_proof, 'base64').toString('hex') : base64ToHex(ctx.data.merkle_proof)) : '',
+        merkle_proof: ctx.data.merkle_proof
+          ? typeof Buffer !== "undefined"
+            ? Buffer.from(ctx.data.merkle_proof, "base64").toString("hex")
+            : base64ToHex(ctx.data.merkle_proof)
+          : "",
       };
     }
   }
@@ -315,16 +359,18 @@ export class JungleBusSubscription {
 
 function toHexString(byteArray: Uint8Array) {
   return Array.from(byteArray, function (byte) {
-    return ('0' + (byte & 0xFF).toString(16)).slice(-2);
-  }).join('').toLowerCase();
+    return ("0" + (byte & 0xff).toString(16)).slice(-2);
+  })
+    .join("")
+    .toLowerCase();
 }
 
 function base64ToHex(str: string) {
   const raw = atob(str);
-  let result = '';
+  let result = "";
   for (let i = 0; i < raw.length; i++) {
     const hex = raw.charCodeAt(i).toString(16);
-    result += (hex.length === 2 ? hex : '0' + hex);
+    result += hex.length === 2 ? hex : "0" + hex;
   }
   return result.toLowerCase();
 }
