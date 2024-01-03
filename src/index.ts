@@ -226,7 +226,29 @@ export class JungleBusClient {
       this.Connect();
     }
 
-    return new JungleBusSubscription(this.client, subscriptionID, fromBlock, onPublish, onStatus, onError, onMempool);
+    return new JungleBusSubscription(this.client, subscriptionID, fromBlock, 
+      async  (tx) => {
+        if (onPublish) {
+          if(!tx.transaction.length) {
+            const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${tx.id}/bin`;
+            const resp = await fetch(url);
+            tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('base64')
+          }
+          onPublish(tx);
+        }
+      }, 
+      onStatus, 
+      onError, 
+      async  (tx) => {
+        if (onMempool) {
+          if(!tx.transaction.length) {
+            const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${tx.id}/bin`;
+            const resp = await fetch(url);
+            tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('base64')
+          }
+          onMempool(tx);
+        }
+      });
   }
 
   /**
