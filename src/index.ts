@@ -215,6 +215,7 @@ export class JungleBusClient {
     onStatus?: (message: ControlMessage) => void,
     onError?: (error: SubscriptionErrorContext) => void,
     onMempool?: (tx: Transaction) => void,
+    liteMode = false
   ): Promise<JungleBusSubscription> {
     if (!this.client.token) {
       // we do not have a token yet, sign in anonymously with the subscription id
@@ -229,7 +230,7 @@ export class JungleBusClient {
     return new JungleBusSubscription(this.client, subscriptionID, fromBlock, 
       async  (tx) => {
         if (onPublish) {
-          if(!tx.transaction.length) {
+          if(!tx.transaction.length && !liteMode) {
             const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${tx.id}/bin`;
             const resp = await fetch(url);
             tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('base64')
@@ -241,14 +242,15 @@ export class JungleBusClient {
       onError, 
       async  (tx) => {
         if (onMempool) {
-          if(!tx.transaction.length) {
+          if(!tx.transaction.length && !liteMode) {
             const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${tx.id}/bin`;
             const resp = await fetch(url);
             tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('base64')
           }
           onMempool(tx);
         }
-      });
+      },
+      liteMode);
   }
 
   /**
