@@ -23,6 +23,7 @@ export class JungleBusSubscription {
   mempoolSubscription: Subscription | undefined;
   subscriptionID: string;
   currentBlock: number;
+  currentPage: number;
   onPublish?: (tx: Transaction) => void;
   onMempool?: (tx: Transaction) => void;
   onStatus?: (message: ControlMessage) => void;
@@ -49,6 +50,7 @@ export class JungleBusSubscription {
     this.client = client;
     this.subscriptionID = subscriptionID;
     this.currentBlock = fromBlock;
+    this.currentPage = 0;
     this.onPublish = onPublish;
     this.onMempool = onMempool;
     this.onStatus = onStatus;
@@ -115,7 +117,6 @@ export class JungleBusSubscription {
         message = ctx.data;
       }
 
-
       if (message.statusCode === ControlMessageStatusCode.ERROR) {
         if (self.onError) {
           self.onError({
@@ -129,7 +130,12 @@ export class JungleBusSubscription {
         }
       } else {
         if (message.statusCode === ControlMessageStatusCode.BLOCK_DONE) {
+          this.currentBlock = message.block + 1;
+          this.currentPage = 0;
+        }
+        if (message.statusCode === ControlMessageStatusCode.PAGE_DONE) {
           this.currentBlock = message.block;
+          this.currentPage = message.transactions + 1;
         }
 
         if (this.onStatus) {
@@ -175,7 +181,7 @@ export class JungleBusSubscription {
   }
 
   private subscribeTransactionBlocks(): void {
-    const channel = `${this.liteMode ? 'lite' : 'query'}:${this.subscriptionID}:${this.currentBlock}`;
+    const channel = `${this.liteMode ? 'lite' : 'query'}:${this.subscriptionID}:${this.currentBlock}:${this.currentPage}`;
 
     let pauseTimeOut: ReturnType<typeof setTimeout>;
 
@@ -274,6 +280,15 @@ export class JungleBusSubscription {
    */
   GetCurrentBlock(): number {
     return this.currentBlock;
+  }
+
+  /**
+   * Get the current last page that was processed completely
+   *
+   * @return number
+   */
+  GetCurrentPage(): number {
+    return this.currentPage;
   }
 
   /**

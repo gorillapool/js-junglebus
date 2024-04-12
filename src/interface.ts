@@ -81,6 +81,7 @@ export enum ControlMessageStatusCode {
   WAITING = 100,
   ERROR = 101,
   PAUSED = 102,
+  PAGE_DONE = 199,
   BLOCK_DONE = 200,
   REORG = 300,
 }
