@@ -92,3 +92,19 @@ export interface ControlMessage {
   block: number;
   transactions: number;
 }
+
+export interface User {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string;
+  avatar: string;
+  privateKey: string;
+  publicKey: string;
+  fundAddress: string;
+  fundHeight: number;
+  fundTotal: number;
+  fundUsed: number;
+  fundBalance: number;
+}
+

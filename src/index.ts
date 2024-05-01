@@ -7,6 +7,7 @@ import {
   ControlMessageStatusCode,
   Transaction,
   TransactionMessage,
+  User,
 } from "./interface";
 import Centrifuge from 'centrifuge/build/protobuf';
 import { JungleBusSubscription } from "./subscription";
@@ -309,6 +310,16 @@ export class JungleBusClient {
    */
   async GetAddressTransactionDetails(address: string): Promise<Address[] | null> {
     const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/address/transactions/${address}`;
+    return await this.apiRequest(url);
+  }
+
+  /**
+   * Get a user object from the JungleBus server
+   * 
+   * @returns Promis<User>
+   */
+  async GetUser(): Promise<User> {
+    const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/user/get`;
     return await this.apiRequest(url);
   }
 
