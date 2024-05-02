@@ -6,7 +6,6 @@ import {
 } from "centrifuge";
 
 import BetterQueue from "better-queue";
-import MemoryStore from "better-queue-memory";
 import {
   Client,
   ControlMessage,
@@ -15,6 +14,7 @@ import {
   TransactionMessage,
 } from "./interface";
 import { ProtobufRoot } from "./protobuf";
+const MemoryStore = require("better-queue-memory");
 
 /**
  * JungleBusSubscription class
@@ -68,40 +68,24 @@ export class JungleBusSubscription {
     this.controlSubscribed = false;
     this.mempoolSubscribed = false;
 
-    this.subscriptionQueue = new Queue(
-      async function (tx, cb) {
-        if (tx.statusCode) {
-          if (onStatus) {
-            await onStatus(tx);
-          }
-        } else {
-          if (onPublish) {
-            await onPublish(tx);
-          }
+    this.subscriptionQueue = new Queue(async function (tx, cb) {
+      if (tx.statusCode) {
+        if (onStatus) {
+          await onStatus(tx);
         }
-        cb(null, true);
-      },
-      typeof window === "object"
-        ? {
-            // If we're in the browser use better-queue-memory
-            store: new MemoryStore(),
-          }
-        : undefined
-    );
-    this.mempoolQueue = new Queue(
-      async function (tx, cb) {
-        if (onMempool) {
-          await onMempool(tx);
+      } else {
+        if (onPublish) {
+          await onPublish(tx);
         }
-        cb(null, true);
-      },
-      typeof window === "object"
-        ? {
-            // If we're in the browser use better-queue-memory
-            store: new MemoryStore(),
-          }
-        : undefined
-    );
+      }
+      cb(null, true);
+    }, queueOptions());
+    this.mempoolQueue = new Queue(async function (tx, cb) {
+      if (onMempool) {
+        await onMempool(tx);
+      }
+      cb(null, true);
+    }, queueOptions());
 
     this.Subscribe();
   }
@@ -373,4 +357,13 @@ function base64ToHex(str: string) {
     result += hex.length === 2 ? hex : "0" + hex;
   }
   return result.toLowerCase();
+}
+
+function queueOptions() {
+  return typeof window === "object"
+    ? {
+        // If we're in the browser use better-queue-memory
+        store: new MemoryStore(),
+      }
+    : undefined;
 }
