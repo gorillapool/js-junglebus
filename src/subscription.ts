@@ -54,7 +54,8 @@ export class JungleBusSubscription {
     onPublish?: (tx: Transaction) => void,
     onStatus?: (message: ControlMessage) => void,
     onError?: (error: SubscriptionErrorContext) => void,
-    onMempool?: (tx: Transaction) => void
+    onMempool?: (tx: Transaction) => void,
+    private liteMode = false
   ) {
     this.client = client;
     this.subscriptionID = subscriptionID;
@@ -168,7 +169,7 @@ export class JungleBusSubscription {
 
   private subscribeMempool() {
     const self = this;
-    const mempoolChannel = `query:${self.subscriptionID}:mempool`;
+    const mempoolChannel = `${this.liteMode ? 'lite' : 'query'}:${self.subscriptionID}:mempool`;
 
     this.mempoolSubscription =
       self.client.centrifuge.newSubscription(mempoolChannel);
@@ -192,7 +193,7 @@ export class JungleBusSubscription {
   }
 
   private subscribeTransactionBlocks(): void {
-    const channel = `query:${this.subscriptionID}:${this.currentBlock}`;
+    const channel = `${this.liteMode ? 'lite' : 'query'}:${this.subscriptionID}:${this.currentBlock}`;
 
     let pauseTimeOut: ReturnType<typeof setTimeout>;
 

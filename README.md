@@ -8,13 +8,18 @@
 [![Sponsor](https://img.shields.io/badge/sponsor-GorillaPool-181717.svg?logo=github&style=flat&v=2)](https://github.com/sponsors/GorillaPool)
 
 ## Table of Contents
-- [What is JungleBus?](#what-is-junglebus)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Documentation](#documentation)
-- [Code Standards](#code-standards)
-- [Contributing](#contributing)
-- [License](#license)
+- [Gorilla Pool JungleBus: JS Client](#gorilla-pool-junglebus-js-client)
+  - [Table of Contents](#table-of-contents)
+  - [What is JungleBus?](#what-is-junglebus)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Lite Mode](#lite-mode)
+  - [Documentation](#documentation)
+  - [Code Standards](#code-standards)
+  - [Contributing](#contributing)
+    - [How can I help?](#how-can-i-help)
+    - [Contributors ✨](#contributors-)
+  - [License](#license)
 
 <br />
 
@@ -67,26 +72,35 @@ const fromBlock = 750000;
 const subscription = jungleBusClient.Subscribe(
   subId,
   fromBlock,
-  function onPublish(tx) {
+  onPublish(tx) => {
     // add your own code here
     console.log(tx);
 
   },
-  function onStatus(ctx) {
+  onStatus(ctx) => {
     // add your own code here
     console.log(ctx);
   },
-  function onError(ctx) {
+  onError(ctx) => {
     // add your own code here
     console.log(ctx);
   },
-  function onMempool(tx) {
+  onMempool(tx) => {
     // add your own code here
     console.log(tx);
   });
 ```
 
 <br />
+
+## Lite Mode
+JungleBus also supports a lite mode, which delivers only the transaction hash and block height. This is useful for applications that only need to know when a transaction is included in a block.
+
+To use lite mode, just pass true as a final argument to the Subscribe method.
+
+```javascript
+await client.Subscribe("a5e2fa655c41753331539a2a86546bf9335ff6d9b7a512dc9acddb00ab9985c0", 1550000, onPublish, onStatus, onError, onMempool, true);
+```
 
 ## Documentation
 View more [JungleBus documentation](https://junglebus.gorillapool.io/docs).

@@ -7,6 +7,7 @@ import {
   ControlMessageStatusCode,
   Transaction,
   TransactionMessage,
+  User,
 } from "./interface";
 import Centrifuge from 'centrifuge/build/protobuf';
 import { JungleBusSubscription } from "./subscription";
@@ -215,6 +216,7 @@ export class JungleBusClient {
     onStatus?: (message: ControlMessage) => void,
     onError?: (error: SubscriptionErrorContext) => void,
     onMempool?: (tx: Transaction) => void,
+    liteMode = false
   ): Promise<JungleBusSubscription> {
     if (!this.client.token) {
       // we do not have a token yet, sign in anonymously with the subscription id
@@ -226,7 +228,30 @@ export class JungleBusClient {
       this.Connect();
     }
 
-    return new JungleBusSubscription(this.client, subscriptionID, fromBlock, onPublish, onStatus, onError, onMempool);
+    return new JungleBusSubscription(this.client, subscriptionID, fromBlock, 
+      async  (tx) => {
+        if (onPublish) {
+          if(!tx.transaction.length && !liteMode) {
+            const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${tx.id}/bin`;
+            const resp = await fetch(url);
+            tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('base64')
+          }
+          onPublish(tx);
+        }
+      }, 
+      onStatus, 
+      onError, 
+      async  (tx) => {
+        if (onMempool) {
+          if(!tx.transaction.length && !liteMode) {
+            const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${tx.id}/bin`;
+            const resp = await fetch(url);
+            tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('base64')
+          }
+          onMempool(tx);
+        }
+      },
+      liteMode);
   }
 
   /**
@@ -285,6 +310,16 @@ export class JungleBusClient {
    */
   async GetAddressTransactionDetails(address: string): Promise<Address[] | null> {
     const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/address/transactions/${address}`;
+    return await this.apiRequest(url);
+  }
+
+  /**
+   * Get a user object from the JungleBus server
+   * 
+   * @returns Promis<User>
+   */
+  async GetUser(): Promise<User> {
+    const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/user/get`;
     return await this.apiRequest(url);
   }
 
