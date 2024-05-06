@@ -1848,10 +1848,10 @@
   dependencies:
     "@types/babel-types" "*"
 
-"@types/better-queue@^3.8.3":
-  version "3.8.3"
-  resolved "https://registry.yarnpkg.com/@types/better-queue/-/better-queue-3.8.3.tgz#69dd8ba158749749df0cb48ef05ab4d62145575a"
-  integrity sha512-xCWSF5i1CJMq271mGjK4MrAzIEFNFKVv/eMtL8eUyD4rOOcx1SBs2zhcQxVkWjCz2TVMQOUUxwkgWyDDyvw+rw==
+"@types/better-queue@^3.8.6":
+  version "3.8.6"
+  resolved "https://registry.yarnpkg.com/@types/better-queue/-/better-queue-3.8.6.tgz#24366d66cf8f34304b90ff76585688b7676d6b3f"
+  integrity sha512-iC8L2LmVwgA0lcfrw9bLt0qQ8BVs2HOK/c2vtUnqQvoltMGn1GQ4OQChZFLRSx9AXgtdF6FDVsGDqyaV/urChw==
   dependencies:
     "@types/node" "*"
 
