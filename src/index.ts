@@ -234,7 +234,7 @@ export class JungleBusClient {
           if(!tx.transaction.length && !liteMode) {
             const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${tx.id}/bin`;
             const resp = await fetch(url);
-            tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('base64')
+            tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('hex')
           }
           onPublish(tx);
         }
@@ -246,7 +246,7 @@ export class JungleBusClient {
           if(!tx.transaction.length && !liteMode) {
             const url = `${this.client.useSSL ? 'https' : 'http'}://${this.client.serverUrl}/v1/transaction/get/${tx.id}/bin`;
             const resp = await fetch(url);
-            tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('base64')
+            tx.transaction = Buffer.from(await resp.arrayBuffer()).toString('hex')
           }
           onMempool(tx);
         }
