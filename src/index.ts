@@ -227,7 +227,7 @@ export class JungleBusClient {
       this.Connect();
     }
 
-    return new JungleBusSubscription(this.client, subscriptionID, fromBlock, 
+    return new JungleBusSubscription(this.client, subscriptionID, fromBlock,
       async  (tx) => {
         if (onPublish) {
           if(!tx.transaction.length && !liteMode) {
